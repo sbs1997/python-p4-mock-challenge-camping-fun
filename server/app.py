@@ -25,5 +25,40 @@ db.init_app(app)
 def home():
     return ''
 
+@app.route('/campers', methods=['GET', 'POST'])
+def get_campers():
+    if request.method == 'GET':
+        campers = Camper.query.all()
+        campers_dict = []
+        for camper in campers:
+            campers_dict.append(camper.to_dict(rules=('-signups',)))
+        response = make_response(campers_dict, 200)
+    
+    return response
+
+@app.route('/campers/<int:id>', methods= ['GET', 'PATCH'])
+def camper_by_id(id):
+    camper = Camper.query.filter(Camper.id == id).first()
+    error = {"error": "Camper not found"}
+    if camper:
+        if request.method == 'GET':
+            response = make_response(camper.to_dict(), 200)
+        elif request.method == 'PATCH':
+            old_camper = camper
+            for attr in request.form:
+                setattr(camper, attr, request.form.get(attr))
+            db.session.commit()
+            if old_camper != camper:
+                response = make_response(camper.to_dict(), 201)
+            else:
+                error = {"errors": ["validation errors"]}
+                response = make_response(jsonify(error), 400)
+    else:
+        response = make_response(jsonify(error), 404)
+    
+    return response
+
+
+
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
